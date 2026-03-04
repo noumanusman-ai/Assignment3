@@ -10,7 +10,8 @@
       "Bash(pnpm:*)",
       "Bash(npx shadcn@latest:*)",
       "mcp__ide__getDiagnostics",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(node:*)"
     ]
   }
 }
