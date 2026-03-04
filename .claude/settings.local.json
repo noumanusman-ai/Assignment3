@@ -8,7 +8,11 @@
       "Bash(pnpm add:*)",
       "Bash(pnpm approve-builds:*)",
       "Bash(pnpm:*)",
-      "Bash(npx shadcn@latest:*)"
+      "Bash(npx shadcn@latest:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(npx tsc:*)",
+      "Bash(node:*)",
+      "Bash(npx tsx:*)"
     ]
   }
 }
