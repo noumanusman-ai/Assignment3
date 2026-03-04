@@ -23,8 +23,8 @@ const vector = customType<{ data: number[]; driverParam: string }>({
   toDriver(value: number[]) {
     return `[${value.join(",")}]`;
   },
-  fromDriver(value: string) {
-    return value
+  fromDriver(value: unknown) {
+    return String(value)
       .slice(1, -1)
       .split(",")
       .map(Number);
