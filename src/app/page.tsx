@@ -1,0 +1,28 @@
+import Link from "next/link";
+
+export default function Home() {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-8 p-8">
+      <div className="text-center">
+        <h1 className="text-4xl font-bold tracking-tight">RAG Chat App</h1>
+        <p className="mt-2 text-muted-foreground">
+          AI-powered chat with document retrieval using pgvector
+        </p>
+      </div>
+      <div className="flex gap-4">
+        <Link
+          href="/login"
+          className="rounded-lg bg-primary px-6 py-3 text-primary-foreground transition-colors hover:bg-primary/90"
+        >
+          Sign In
+        </Link>
+        <Link
+          href="/register"
+          className="rounded-lg border border-border px-6 py-3 transition-colors hover:bg-accent"
+        >
+          Register
+        </Link>
+      </div>
+    </div>
+  );
+}
