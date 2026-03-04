@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { db } from "../src/lib/db";
 import { users, documents, conversations, messages } from "../src/lib/db/schema";
 import { hashSync } from "bcryptjs";
