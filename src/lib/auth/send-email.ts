@@ -1,13 +1,21 @@
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 const APP_URL = process.env.NEXTAUTH_URL || "http://localhost:3000";
-const FROM_EMAIL = "RAG Chat <onboarding@resend.dev>";
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_APP_PASSWORD,
+  },
+});
+
+const FROM_EMAIL = `RAG Chat <${process.env.SMTP_USER}>`;
 
 export async function sendVerificationEmail(email: string, token: string) {
   const verifyUrl = `${APP_URL}/verify-email?token=${token}`;
 
-  await resend.emails.send({
+  await transporter.sendMail({
     from: FROM_EMAIL,
     to: email,
     subject: "Verify your email - RAG Chat",
@@ -31,7 +39,7 @@ export async function sendVerificationEmail(email: string, token: string) {
 export async function sendPasswordResetEmail(email: string, token: string) {
   const resetUrl = `${APP_URL}/reset-password?token=${token}`;
 
-  await resend.emails.send({
+  await transporter.sendMail({
     from: FROM_EMAIL,
     to: email,
     subject: "Reset your password - RAG Chat",
