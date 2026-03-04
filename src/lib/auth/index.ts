@@ -15,7 +15,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     sessionsTable: sessions,
     verificationTokensTable: verificationTokens,
   }),
-  session: { strategy: "database" },
+  session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
   },
@@ -67,18 +67,23 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    async session({ session, user }) {
-      if (session.user) {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        // Fetch role from DB
         const [dbUser] = await db
-          .select({ id: users.id, role: users.role })
+          .select({ role: users.role })
           .from(users)
-          .where(eq(users.id, user.id))
+          .where(eq(users.id, user.id!))
           .limit(1);
-
-        if (dbUser) {
-          session.user.id = dbUser.id;
-          session.user.role = dbUser.role;
-        }
+        token.role = dbUser?.role ?? "user";
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string;
+        session.user.role = token.role as "user" | "admin";
       }
       return session;
     },

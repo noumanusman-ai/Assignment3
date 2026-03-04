@@ -112,7 +112,8 @@ export function ChatInterface({
 
       if (citationsHeader) {
         try {
-          setStreamingCitations(JSON.parse(citationsHeader));
+          const decoded = atob(citationsHeader);
+          setStreamingCitations(JSON.parse(decoded));
         } catch {}
       }
 

@@ -5,7 +5,7 @@ export const google = createGoogleGenerativeAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
 
-export const model = google("gemini-2.0-flash");
+export const model = google("gemini-2.5-flash");
 
 export function buildSystemPrompt(context: ChunkWithScore[]): string {
   if (context.length === 0) {
