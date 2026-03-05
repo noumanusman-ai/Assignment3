@@ -1,24 +1,17 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { RegisterForm } from "@/components/auth/register-form";
 
 export default function RegisterPage() {
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Create an account</CardTitle>
-        <CardDescription>
-          Enter your details to get started
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <RegisterForm />
-      </CardContent>
-    </Card>
+    <div className="glass-card rounded-xl p-8 lg:p-10">
+      <div className="text-center mb-8">
+        <h1 className="text-2xl font-semibold tracking-tight text-white mb-2">
+          Create your account
+        </h1>
+        <p className="text-slate-400 text-sm">
+          Get started with ArborVect in seconds
+        </p>
+      </div>
+      <RegisterForm />
+    </div>
   );
 }
