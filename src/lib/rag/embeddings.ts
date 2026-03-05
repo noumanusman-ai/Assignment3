@@ -13,6 +13,22 @@ interface EmbedQueryResponse {
   dimensions: number;
 }
 
+export interface SemanticChunk {
+  content: string;
+  embedding: number[];
+  chunk_index: number;
+  start_offset: number;
+  end_offset: number;
+  sentence_count: number;
+}
+
+interface SemanticChunkResponse {
+  chunks: SemanticChunk[];
+  model: string;
+  dimensions: number;
+  total_sentences: number;
+}
+
 export async function generateEmbeddings(
   texts: string[]
 ): Promise<number[][]> {
@@ -45,4 +61,30 @@ export async function generateQueryEmbedding(
 
   const data: EmbedQueryResponse = await res.json();
   return data.embedding;
+}
+
+export async function semanticChunk(
+  text: string,
+  options: {
+    similarityThreshold?: number;
+    maxChunkSize?: number;
+    minChunkSize?: number;
+  } = {}
+): Promise<SemanticChunkResponse> {
+  const res = await fetch(`${EMBEDDING_API_URL}/semantic-chunk`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      text,
+      similarity_threshold: options.similarityThreshold ?? 0.5,
+      max_chunk_size: options.maxChunkSize ?? 1500,
+      min_chunk_size: options.minChunkSize ?? 100,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Semantic chunk API error: ${res.status} ${await res.text()}`);
+  }
+
+  return res.json();
 }

@@ -21,17 +21,22 @@ export function ChatInterface({
   const [convId, setConvId] = useState(initialConvId);
   const [dbMessages, setDbMessages] = useState<ChatMessage[]>(initialMessages);
   const [messagePath, setMessagePath] = useState<ChatMessage[]>([]);
+  const [currentLeafId, setCurrentLeafId] = useState<string | undefined>(
+    undefined
+  );
   const [citationsMap, setCitationsMap] = useState<Record<string, Citation[]>>(
     {}
   );
   const [streamingCitations, setStreamingCitations] = useState<Citation[]>([]);
   const [isStreamingActive, setIsStreamingActive] = useState(false);
   const [streamedContent, setStreamedContent] = useState("");
+  const [sentContent, setSentContent] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState("");
 
+  // Rebuild displayed path when messages or active leaf changes
   useEffect(() => {
     if (dbMessages.length > 0) {
-      const path = buildMessagePath(dbMessages);
+      const path = buildMessagePath(dbMessages, currentLeafId);
       setMessagePath(path);
 
       const map: Record<string, Citation[]> = {};
@@ -42,7 +47,7 @@ export function ChatInterface({
       }
       setCitationsMap(map);
     }
-  }, [dbMessages]);
+  }, [dbMessages, currentLeafId]);
 
   const refreshMessages = useCallback(async (id: string) => {
     try {
@@ -67,6 +72,7 @@ export function ChatInterface({
     if (!content.trim()) return;
     setIsStreamingActive(true);
     setStreamedContent("");
+    setSentContent(content);
     setInputValue("");
 
     const historyMessages =
@@ -131,6 +137,9 @@ export function ChatInterface({
         }
       }
 
+      // Follow the latest branch (the one we just created)
+      setCurrentLeafId(undefined);
+
       const finalConvId = newConvId || convId;
       if (finalConvId) {
         await refreshMessages(finalConvId);
@@ -141,6 +150,73 @@ export function ChatInterface({
       setIsStreamingActive(false);
       setStreamedContent("");
       setStreamingCitations([]);
+      setSentContent(null);
+    }
+  }
+
+  async function handleRegenerate(messageId: string) {
+    const msg = dbMessages.find((m) => m.id === messageId);
+    if (!msg || msg.role !== "assistant" || !msg.parentId || !convId) return;
+
+    const userParent = dbMessages.find((m) => m.id === msg.parentId);
+    if (!userParent) return;
+
+    setIsStreamingActive(true);
+    setStreamedContent("");
+    setSentContent(null); // No user bubble during regeneration
+
+    // Build history up to and including the user parent
+    const userIdx = messagePath.findIndex((m) => m.id === userParent.id);
+    const pathUpToUser = messagePath.slice(0, userIdx + 1);
+    const chatHistory = pathUpToUser.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: chatHistory,
+          conversationId: convId,
+          regenerate: true,
+          userMessageId: userParent.id,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to regenerate");
+
+      const citationsHeader = res.headers.get("X-Citations");
+      if (citationsHeader) {
+        try {
+          const decoded = atob(citationsHeader);
+          setStreamingCitations(JSON.parse(decoded));
+        } catch {}
+      }
+
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      let fullContent = "";
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          fullContent += decoder.decode(value, { stream: true });
+          setStreamedContent(fullContent);
+        }
+      }
+
+      // Follow the latest branch (the newly regenerated one)
+      setCurrentLeafId(undefined);
+      await refreshMessages(convId);
+    } catch (err) {
+      console.error("Regeneration failed:", err);
+    } finally {
+      setIsStreamingActive(false);
+      setStreamedContent("");
+      setStreamingCitations([]);
+      setSentContent(null);
     }
   }
 
@@ -152,22 +228,16 @@ export function ChatInterface({
       direction
     );
     setMessagePath(newPath);
+    // Track the leaf of the new branch so it persists across refreshes
+    if (newPath.length > 0) {
+      setCurrentLeafId(newPath[newPath.length - 1].id);
+    }
   }
 
   function handleEdit(messageId: string, newContent: string) {
     const msg = dbMessages.find((m) => m.id === messageId);
     if (!msg) return;
     sendMessage(newContent, msg.parentId);
-  }
-
-  async function handleRegenerate(messageId: string) {
-    const msg = dbMessages.find((m) => m.id === messageId);
-    if (!msg || !msg.parentId || !convId) return;
-
-    const parentMsg = dbMessages.find((m) => m.id === msg.parentId);
-    if (!parentMsg) return;
-
-    sendMessage(parentMsg.content, parentMsg.parentId);
   }
 
   function onSubmit() {
@@ -231,11 +301,13 @@ export function ChatInterface({
           {/* Streaming */}
           {isStreamingActive && (
             <>
-              <MessageBubble
-                id="streaming-user"
-                role="user"
-                content={inputValue || "..."}
-              />
+              {sentContent !== null && (
+                <MessageBubble
+                  id="streaming-user"
+                  role="user"
+                  content={sentContent}
+                />
+              )}
               <MessageBubble
                 id="streaming-assistant"
                 role="assistant"

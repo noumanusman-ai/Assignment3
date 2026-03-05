@@ -1,6 +1,3 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, FileText, MessagesSquare } from "lucide-react";
-
 interface StatsCardsProps {
   totalUsers: number;
   totalDocuments: number;
@@ -13,26 +10,43 @@ export function StatsCards({
   totalConversations,
 }: StatsCardsProps) {
   const stats = [
-    { label: "Total Users", value: totalUsers, icon: Users },
-    { label: "Documents", value: totalDocuments, icon: FileText },
-    { label: "Conversations", value: totalConversations, icon: MessagesSquare },
+    {
+      label: "Total Users",
+      value: totalUsers.toLocaleString(),
+      icon: "groups",
+    },
+    {
+      label: "Conversations",
+      value: totalConversations.toLocaleString(),
+      icon: "sensors",
+    },
+    {
+      label: "Documents Indexed",
+      value: totalDocuments.toLocaleString(),
+      icon: "database",
+    },
   ];
 
   return (
-    <div className="grid gap-4 md:grid-cols-3">
+    <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {stats.map((stat) => (
-        <Card key={stat.label}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+        <div
+          key={stat.label}
+          className="bg-[#18181b] border border-[#27272a] p-5 rounded-xl shadow-sm hover:border-slate-700 transition-colors"
+        >
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">
               {stat.label}
-            </CardTitle>
-            <stat.icon className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stat.value}</div>
-          </CardContent>
-        </Card>
+            </span>
+            <span className="material-symbols-outlined text-[#6366f1]">
+              {stat.icon}
+            </span>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <h3 className="text-2xl font-bold">{stat.value}</h3>
+          </div>
+        </div>
       ))}
-    </div>
+    </section>
   );
 }
