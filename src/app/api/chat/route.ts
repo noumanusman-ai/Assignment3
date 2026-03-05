@@ -145,11 +145,14 @@ export async function POST(req: NextRequest) {
     },
   });
 
+  // Base64-encode citations to avoid non-ASCII header issues
+  const citationsB64 = Buffer.from(JSON.stringify(citations)).toString("base64");
+
   return result.toTextStreamResponse({
     headers: {
       "X-Conversation-Id": convId,
       "X-User-Message-Id": userMsg.id,
-      "X-Citations": JSON.stringify(citations),
+      "X-Citations": citationsB64,
     },
   });
 }

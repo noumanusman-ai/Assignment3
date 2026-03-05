@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-// Using direct fetch for streaming to maintain full control over the request/response
 import { MessageBubble } from "./message-bubble";
 import { ChatInput } from "./chat-input";
 import { buildMessagePath, getSiblings, switchBranch } from "@/lib/chat/tree";
@@ -30,7 +29,6 @@ export function ChatInterface({
   const [streamedContent, setStreamedContent] = useState("");
   const [inputValue, setInputValue] = useState("");
 
-  // Build the current path from DB messages
   useEffect(() => {
     if (dbMessages.length > 0) {
       const path = buildMessagePath(dbMessages);
@@ -58,7 +56,6 @@ export function ChatInterface({
     }
   }, []);
 
-  // Auto-scroll
   useEffect(() => {
     scrollRef.current?.scrollTo({
       top: scrollRef.current.scrollHeight,
@@ -72,12 +69,15 @@ export function ChatInterface({
     setStreamedContent("");
     setInputValue("");
 
-    // Build chat history from current path
-    const historyMessages = parentId !== undefined
-      ? messagePath
-          .slice(0, messagePath.findIndex((m) => m.id === parentId) + 1)
-          .map((m) => ({ role: m.role, content: m.content }))
-      : messagePath.map((m) => ({ role: m.role, content: m.content }));
+    const historyMessages =
+      parentId !== undefined
+        ? messagePath
+            .slice(
+              0,
+              messagePath.findIndex((m) => m.id === parentId) + 1
+            )
+            .map((m) => ({ role: m.role, content: m.content }))
+        : messagePath.map((m) => ({ role: m.role, content: m.content }));
 
     const chatHistory = [
       ...historyMessages,
@@ -91,17 +91,17 @@ export function ChatInterface({
         body: JSON.stringify({
           messages: chatHistory,
           conversationId: convId,
-          parentId: parentId !== undefined
-            ? parentId
-            : messagePath.length > 0
-              ? messagePath[messagePath.length - 1]?.id
-              : null,
+          parentId:
+            parentId !== undefined
+              ? parentId
+              : messagePath.length > 0
+                ? messagePath[messagePath.length - 1]?.id
+                : null,
         }),
       });
 
       if (!res.ok) throw new Error("Failed to send message");
 
-      // Get headers
       const newConvId = res.headers.get("X-Conversation-Id");
       const citationsHeader = res.headers.get("X-Citations");
 
@@ -112,11 +112,11 @@ export function ChatInterface({
 
       if (citationsHeader) {
         try {
-          setStreamingCitations(JSON.parse(citationsHeader));
+          const decoded = atob(citationsHeader);
+          setStreamingCitations(JSON.parse(decoded));
         } catch {}
       }
 
-      // Stream the response
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
       let fullContent = "";
@@ -131,7 +131,6 @@ export function ChatInterface({
         }
       }
 
-      // Refresh from DB
       const finalConvId = newConvId || convId;
       if (finalConvId) {
         await refreshMessages(finalConvId);
@@ -146,7 +145,12 @@ export function ChatInterface({
   }
 
   function handleSwitchBranch(messageId: string, direction: "prev" | "next") {
-    const newPath = switchBranch(dbMessages, messagePath, messageId, direction);
+    const newPath = switchBranch(
+      dbMessages,
+      messagePath,
+      messageId,
+      direction
+    );
     setMessagePath(newPath);
   }
 
@@ -163,7 +167,6 @@ export function ChatInterface({
     const parentMsg = dbMessages.find((m) => m.id === msg.parentId);
     if (!parentMsg) return;
 
-    // Resend the parent user message to create a new branch
     sendMessage(parentMsg.content, parentMsg.parentId);
   }
 
@@ -173,10 +176,25 @@ export function ChatInterface({
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <div ref={scrollRef} className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-3xl space-y-6 p-4 pb-8">
-          {/* DB messages following current path */}
+    <div
+      className="flex h-full flex-col relative overflow-hidden"
+      style={{
+        backgroundImage: "radial-gradient(#262626 1px, transparent 1px)",
+        backgroundSize: "24px 24px",
+        backgroundColor: "#0a0a0a",
+      }}
+    >
+      {/* Scrollable message area */}
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto pb-48"
+        style={{
+          scrollbarWidth: "thin",
+          scrollbarColor: "#262626 transparent",
+        }}
+      >
+        <div className="mx-auto max-w-3xl p-6 space-y-4">
+          {/* Messages */}
           {messagePath.map((msg) => {
             const siblings = getSiblings(dbMessages, msg.id);
             const sibIdx = siblings.findIndex((s) => s.id === msg.id);
@@ -210,7 +228,7 @@ export function ChatInterface({
             );
           })}
 
-          {/* Streaming response */}
+          {/* Streaming */}
           {isStreamingActive && (
             <>
               <MessageBubble
@@ -222,7 +240,11 @@ export function ChatInterface({
                 id="streaming-assistant"
                 role="assistant"
                 content={streamedContent || ""}
-                citations={streamingCitations.length > 0 ? streamingCitations : undefined}
+                citations={
+                  streamingCitations.length > 0
+                    ? streamingCitations
+                    : undefined
+                }
                 isStreaming={true}
               />
             </>
@@ -230,18 +252,49 @@ export function ChatInterface({
 
           {/* Empty state */}
           {messagePath.length === 0 && !isStreamingActive && (
-            <div className="flex h-[60vh] items-center justify-center">
-              <div className="text-center">
-                <h2 className="text-2xl font-bold">Start a new chat</h2>
-                <p className="mt-2 text-muted-foreground">
-                  Upload documents and ask questions about them.
+            <div className="flex h-[50vh] items-center justify-center">
+              <div className="text-center max-w-md">
+                <div className="relative mx-auto mb-8 w-20 h-20">
+                  <div className="absolute inset-0 bg-[#6467f2]/20 blur-2xl rounded-full" />
+                  <div className="relative flex items-center justify-center w-20 h-20 rounded-2xl bg-white/5 border border-white/10 shadow-xl">
+                    <span
+                      className="material-symbols-outlined text-4xl text-[#6467f2]"
+                      style={{ fontVariationSettings: "'wght' 300" }}
+                    >
+                      grid_view
+                    </span>
+                  </div>
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-3 tracking-tight">
+                  AI Insight Canvas
+                </h2>
+                <p className="text-slate-500 text-sm leading-relaxed mb-6">
+                  Ask ArborVect anything about your uploaded documents.
+                  Responses appear as interactive widget cards with code
+                  snippets, citations, and more.
                 </p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {[
+                    "Vector Search",
+                    "PDF Analysis",
+                    "Code Generation",
+                    "Data Insights",
+                  ].map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-3 py-1.5 rounded-lg bg-white/5 border border-[#262626] text-[11px] font-medium text-slate-400"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
           )}
         </div>
       </div>
 
+      {/* Bottom input */}
       <ChatInput
         input={inputValue}
         onChange={setInputValue}

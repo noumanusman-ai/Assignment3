@@ -1,9 +1,7 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { SendHorizonal, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 interface ChatInputProps {
   input: string;
@@ -26,6 +24,14 @@ export function ChatInput({
     }
   }, [isLoading]);
 
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (el) {
+      el.style.height = "auto";
+      el.style.height = Math.min(el.scrollHeight, 192) + "px";
+    }
+  }, [input]);
+
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -36,31 +42,88 @@ export function ChatInput({
   }
 
   return (
-    <div className="border-t bg-background p-4">
-      <div className="mx-auto flex max-w-3xl items-end gap-2">
-        <Textarea
-          ref={textareaRef}
-          value={input}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Ask a question about your documents..."
-          className="min-h-[44px] max-h-[200px] resize-none"
-          rows={1}
-          disabled={isLoading}
-        />
-        <Button
-          size="icon"
-          onClick={onSubmit}
-          disabled={!input.trim() || isLoading}
-          aria-label="Send message"
-        >
-          {isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <SendHorizonal className="h-4 w-4" />
-          )}
-        </Button>
+    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-3xl px-6 z-20">
+      <div className="relative group">
+        {/* Gradient glow behind input on focus */}
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-[#6467f2]/20 via-[#6467f2]/5 to-[#6467f2]/20 rounded-xl blur opacity-0 group-focus-within:opacity-100 transition duration-500" />
+
+        <div className="relative bg-[#0a0a0a]/80 backdrop-blur-xl border border-[#262626] rounded-xl shadow-2xl focus-within:border-[#6467f2]/50 transition-all flex flex-col">
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask ArborVect to analyze your documents..."
+            className="w-full bg-transparent border-none focus:ring-0 text-[15px] p-4 resize-none h-[56px] min-h-[56px] max-h-48 text-slate-200 placeholder:text-slate-600 focus:outline-none"
+            disabled={isLoading}
+            style={{
+              scrollbarWidth: "thin",
+              scrollbarColor: "#262626 transparent",
+            }}
+          />
+          <div className="flex items-center justify-between px-3 py-2 border-t border-white/5">
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                className="p-2 text-slate-500 hover:text-slate-200 rounded-lg hover:bg-white/5 transition-colors"
+                aria-label="Attach file"
+              >
+                <span className="material-symbols-outlined text-xl">add</span>
+              </button>
+              <button
+                type="button"
+                className="p-2 text-slate-500 hover:text-slate-200 rounded-lg hover:bg-white/5 transition-colors"
+                aria-label="Upload image"
+              >
+                <span className="material-symbols-outlined text-xl">
+                  image
+                </span>
+              </button>
+              <button
+                type="button"
+                className="p-2 text-slate-500 hover:text-slate-200 rounded-lg hover:bg-white/5 transition-colors"
+                aria-label="Upload document"
+              >
+                <span className="material-symbols-outlined text-xl">
+                  description
+                </span>
+              </button>
+              <div className="w-px h-4 bg-[#262626] mx-2" />
+              <button
+                type="button"
+                className="p-2 text-slate-500 hover:text-slate-200 rounded-lg hover:bg-white/5 transition-colors"
+                aria-label="Settings"
+              >
+                <span className="material-symbols-outlined text-xl">
+                  settings
+                </span>
+              </button>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-[11px] text-slate-500 font-medium hidden sm:block">
+                Shift + Enter for new line
+              </span>
+              <button
+                onClick={onSubmit}
+                disabled={!input.trim() || isLoading}
+                aria-label="Send message"
+                className="bg-[#6467f2] hover:bg-[#6467f2]/90 text-white size-8 rounded-lg flex items-center justify-center shadow-lg shadow-[#6467f2]/20 transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <span className="material-symbols-outlined text-sm">
+                    arrow_upward
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
+      <p className="text-center text-[10px] text-slate-600 mt-4 uppercase tracking-[0.2em] font-semibold opacity-50">
+        AI Powered Insight Canvas &bull; ArborVect v1.2
+      </p>
     </div>
   );
 }

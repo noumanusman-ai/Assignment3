@@ -2,82 +2,116 @@
 
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ThemeToggle } from "./theme-toggle";
 import { LogOut, Shield, User } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 
 export function Header() {
   const { data: session } = useSession();
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
-  const initials = session?.user?.name
-    ?.split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase() || "U";
+  const initials =
+    session?.user?.name
+      ?.split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase() || "U";
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
-    <header className="flex h-14 items-center justify-between border-b px-4">
-      <Link href="/chat" className="text-lg font-semibold">
-        RAG Chat
+    <header className="h-14 border-b border-[#262626] bg-[#0a0a0a] shrink-0 flex items-center px-6">
+      {/* Logo section */}
+      <Link
+        href="/chat"
+        className="flex items-center gap-3 border-r border-[#262626] pr-6 mr-6 shrink-0"
+      >
+        <div className="size-9 bg-[#6467f2] rounded-lg flex items-center justify-center text-white shadow-lg shadow-[#6467f2]/20">
+          <span className="material-symbols-outlined text-xl">
+            account_tree
+          </span>
+        </div>
+        <div>
+          <h1 className="text-sm font-semibold tracking-tight text-white">
+            ArborVect
+          </h1>
+          <p className="text-[10px] text-slate-500 font-medium uppercase tracking-widest">
+            Enterprise AI v1.2
+          </p>
+        </div>
       </Link>
 
-      <div className="flex items-center gap-2">
-        <ThemeToggle />
+      {/* Spacer */}
+      <div className="flex-1" />
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-              <Avatar className="h-8 w-8">
-                <AvatarImage
-                  src={session?.user?.image || undefined}
-                  alt={session?.user?.name || "User"}
-                />
-                <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-              </Avatar>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <div className="flex items-center justify-start gap-2 p-2">
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium">{session?.user?.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {session?.user?.email}
-                </p>
-              </div>
+      {/* User menu */}
+      <div className="relative pl-6 border-l border-[#262626]" ref={menuRef}>
+        <button
+          onClick={() => setOpen(!open)}
+          className="size-9 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden border border-[#262626] hover:border-[#6467f2]/50 transition-colors"
+        >
+          {session?.user?.image ? (
+            <img
+              src={session.user.image}
+              alt={session.user.name || "User"}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <span className="text-xs font-semibold text-white">
+              {initials}
+            </span>
+          )}
+        </button>
+
+        {open && (
+          <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-[#262626] bg-[#0d0d0d] shadow-2xl z-50 overflow-hidden backdrop-blur-xl">
+            <div className="px-4 py-3 border-b border-[#262626]">
+              <p className="text-sm font-medium text-white truncate">
+                {session?.user?.name}
+              </p>
+              <p className="text-xs text-slate-500 truncate">
+                {session?.user?.email}
+              </p>
             </div>
-            <DropdownMenuSeparator />
-            {session?.user?.role === "admin" && (
-              <DropdownMenuItem asChild>
-                <Link href="/admin" className="cursor-pointer">
-                  <Shield className="mr-2 h-4 w-4" />
+            <div className="py-1">
+              {session?.user?.role === "admin" && (
+                <Link
+                  href="/admin"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5 transition-colors"
+                >
+                  <Shield className="h-4 w-4 text-slate-500" />
                   Admin Dashboard
                 </Link>
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem asChild>
-              <Link href="/chat" className="cursor-pointer">
-                <User className="mr-2 h-4 w-4" />
+              )}
+              <Link
+                href="/chat"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5 transition-colors"
+              >
+                <User className="h-4 w-4 text-slate-500" />
                 Chat
               </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="cursor-pointer text-destructive"
-              onClick={() => signOut({ callbackUrl: "/login" })}
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              Sign out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            </div>
+            <div className="border-t border-[#262626] py-1">
+              <button
+                onClick={() => signOut({ callbackUrl: "/login" })}
+                className="flex items-center gap-2 px-4 py-2.5 text-sm text-red-400 hover:bg-white/5 transition-colors w-full text-left"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign out
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </header>
   );
