@@ -10,6 +10,8 @@ export interface ChunkWithScore {
   score: number;
 }
 
+const MIN_SIMILARITY = 0.2;
+
 export async function retrieveRelevantChunks(
   queryEmbedding: number[],
   topK: number = 5,
@@ -29,6 +31,7 @@ export async function retrieveRelevantChunks(
     JOIN chunks c ON c.id = e.chunk_id
     JOIN documents d ON d.id = c.document_id
     WHERE d.status = 'ready'
+      AND 1 - (e.embedding <=> ${embeddingStr}::vector) >= ${MIN_SIMILARITY}
       ${userId ? sql`AND d.user_id = ${userId}` : sql``}
     ORDER BY e.embedding <=> ${embeddingStr}::vector
     LIMIT ${topK}

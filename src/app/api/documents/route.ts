@@ -20,7 +20,7 @@ export async function GET() {
       fileType: documents.fileType,
       status: documents.status,
       createdAt: documents.createdAt,
-      chunkCount: sql<number>`(SELECT COUNT(*) FROM chunks WHERE chunks.document_id = ${documents.id})`,
+      chunkCount: sql<number>`CAST((SELECT COUNT(*) FROM chunks WHERE chunks.document_id = "documents"."id") AS integer)`,
     })
     .from(documents)
     .where(eq(documents.userId, session.user.id))

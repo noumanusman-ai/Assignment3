@@ -49,7 +49,6 @@ export function chunkText(
 
     start = end - overlap;
     if (start >= text.length) break;
-    // Prevent infinite loop
     if (end === text.length) break;
   }
 

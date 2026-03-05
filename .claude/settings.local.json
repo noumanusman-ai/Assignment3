@@ -12,7 +12,12 @@
       "mcp__ide__getDiagnostics",
       "Bash(npx tsc:*)",
       "Bash(node:*)",
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "Bash(docker compose:*)",
+      "Bash(curl:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker exec:*)",
+      "Bash(npx drizzle-kit:*)"
     ]
   }
 }
