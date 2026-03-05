@@ -3,7 +3,7 @@ import { streamText } from "ai";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { conversations, messages } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { model, buildSystemPrompt } from "@/lib/ai";
 import { generateQueryEmbedding } from "@/lib/rag/embeddings";
 import { retrieveRelevantChunks } from "@/lib/rag/retrieval";
@@ -20,10 +20,14 @@ export async function POST(req: NextRequest) {
     messages: chatMessages,
     conversationId,
     parentId,
+    regenerate,
+    userMessageId,
   } = body as {
     messages: { role: string; content: string }[];
     conversationId?: string;
     parentId?: string | null;
+    regenerate?: boolean;
+    userMessageId?: string;
   };
 
   const lastUserMessage = chatMessages[chatMessages.length - 1];
@@ -61,35 +65,6 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Calculate sibling index for the user message
-  let siblingIndex = 0;
-  if (parentId !== undefined) {
-    const siblings = await db
-      .select({ siblingIndex: messages.siblingIndex })
-      .from(messages)
-      .where(
-        and(
-          eq(messages.conversationId, convId),
-          parentId === null
-            ? eq(messages.parentId, parentId as any)
-            : eq(messages.parentId, parentId)
-        )
-      );
-    siblingIndex = siblings.length;
-  }
-
-  // Save user message
-  const [userMsg] = await db
-    .insert(messages)
-    .values({
-      conversationId: convId,
-      parentId: parentId || null,
-      role: "user",
-      content: lastUserMessage.content,
-      siblingIndex,
-    })
-    .returning();
-
   // RAG: embed query and retrieve context
   let context: Awaited<ReturnType<typeof retrieveRelevantChunks>> = [];
   let citations: Citation[] = [];
@@ -122,6 +97,84 @@ export async function POST(req: NextRequest) {
     content: m.content,
   }));
 
+  const citationsB64 = Buffer.from(JSON.stringify(citations)).toString("base64");
+
+  // ── Regeneration mode: create new assistant sibling only ──
+  if (regenerate && userMessageId && convId) {
+    // Count existing assistant siblings under this user message
+    const assistantSiblings = await db
+      .select({ siblingIndex: messages.siblingIndex })
+      .from(messages)
+      .where(
+        and(
+          eq(messages.conversationId, convId),
+          eq(messages.parentId, userMessageId),
+          eq(messages.role, "assistant")
+        )
+      );
+    const assistantSiblingIndex = assistantSiblings.length;
+
+    const result = streamText({
+      model,
+      system: systemPrompt,
+      messages: aiMessages,
+      onFinish: async ({ text }) => {
+        await db.insert(messages).values({
+          conversationId: convId!,
+          parentId: userMessageId,
+          role: "assistant",
+          content: text,
+          citations: citations.length > 0 ? citations : null,
+          siblingIndex: assistantSiblingIndex,
+        });
+
+        await db
+          .update(conversations)
+          .set({ updatedAt: new Date() })
+          .where(eq(conversations.id, convId!));
+      },
+    });
+
+    return result.toTextStreamResponse({
+      headers: {
+        "X-Conversation-Id": convId,
+        "X-User-Message-Id": userMessageId,
+        "X-Citations": citationsB64,
+      },
+    });
+  }
+
+  // ── Normal mode: create user message + assistant reply ──
+
+  // Calculate sibling index for the user message
+  let siblingIndex = 0;
+  if (parentId !== undefined) {
+    const siblings = await db
+      .select({ siblingIndex: messages.siblingIndex })
+      .from(messages)
+      .where(
+        and(
+          eq(messages.conversationId, convId),
+          parentId === null
+            ? isNull(messages.parentId)
+            : eq(messages.parentId, parentId!)
+        )
+      );
+    siblingIndex = siblings.length;
+  }
+
+  // Save user message
+  const [userMsg] = await db
+    .insert(messages)
+    .values({
+      conversationId: convId,
+      parentId: parentId || null,
+      role: "user",
+      content: lastUserMessage.content,
+      siblingIndex,
+    })
+    .returning();
+
   const result = streamText({
     model,
     system: systemPrompt,
@@ -144,9 +197,6 @@ export async function POST(req: NextRequest) {
         .where(eq(conversations.id, convId!));
     },
   });
-
-  // Base64-encode citations to avoid non-ASCII header issues
-  const citationsB64 = Buffer.from(JSON.stringify(citations)).toString("base64");
 
   return result.toTextStreamResponse({
     headers: {

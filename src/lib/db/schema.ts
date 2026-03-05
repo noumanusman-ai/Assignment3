@@ -46,6 +46,7 @@ export const messageRoleEnum = pgEnum("message_role", [
   "assistant",
   "system",
 ]);
+export const logLevelEnum = pgEnum("log_level", ["INFO", "WARNING", "ERROR"]);
 
 // ─── Auth Tables ───────────────────────────────────────────────
 
@@ -190,6 +191,25 @@ export const messages = pgTable(
       table.conversationId,
       table.parentId
     ),
+  ]
+);
+
+// ─── System Logs ──────────────────────────────────────────────
+
+export const systemLogs = pgTable(
+  "system_logs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    timestamp: timestamp("timestamp", { mode: "date" }).defaultNow().notNull(),
+    level: logLevelEnum("level").notNull(),
+    source: varchar("source", { length: 100 }).notNull(),
+    message: text("message").notNull(),
+    metadata: jsonb("metadata"),
+  },
+  (table) => [
+    index("system_logs_timestamp_idx").on(table.timestamp),
+    index("system_logs_level_idx").on(table.level),
+    index("system_logs_source_idx").on(table.source),
   ]
 );
 

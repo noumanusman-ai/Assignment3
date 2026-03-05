@@ -4,13 +4,10 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   MessageSquarePlus,
   FileText,
-  MessagesSquare,
   Trash2,
   Search,
 } from "lucide-react";
@@ -43,7 +40,6 @@ export function Sidebar() {
     return () => clearInterval(interval);
   }, [fetchConversations]);
 
-  // Refresh when navigating to a new chat
   useEffect(() => {
     fetchConversations();
   }, [pathname, fetchConversations]);
@@ -75,53 +71,59 @@ export function Sidebar() {
       )
     : conversations;
 
-  const navItems = [
-    { href: "/chat", label: "New Chat", icon: MessageSquarePlus },
-    { href: "/documents", label: "Documents", icon: FileText },
-  ];
-
   return (
-    <aside className="flex h-full w-64 flex-col border-r bg-muted/30">
-      <div className="flex h-14 items-center border-b px-4">
-        <MessagesSquare className="mr-2 h-5 w-5" />
-        <span className="font-semibold">Chat History</span>
+    <aside className="flex h-full w-64 flex-col border-r border-[#262626] bg-[#0f0f0f]">
+      {/* Nav actions */}
+      <div className="p-3 space-y-1">
+        <Link
+          href="/chat"
+          className={cn(
+            "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+            pathname === "/chat"
+              ? "bg-[#6366f1]/10 text-[#6366f1]"
+              : "text-slate-400 hover:bg-white/5 hover:text-white"
+          )}
+        >
+          <MessageSquarePlus className="h-4 w-4" />
+          New Chat
+        </Link>
+        <Link
+          href="/documents"
+          className={cn(
+            "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+            pathname === "/documents"
+              ? "bg-[#6366f1]/10 text-[#6366f1]"
+              : "text-slate-400 hover:bg-white/5 hover:text-white"
+          )}
+        >
+          <FileText className="h-4 w-4" />
+          Documents
+        </Link>
       </div>
 
-      <nav className="p-2">
-        {navItems.map((item) => (
-          <Button
-            key={item.href}
-            variant="ghost"
-            asChild
-            className={cn(
-              "w-full justify-start mb-1",
-              pathname === item.href && "bg-accent"
-            )}
-          >
-            <Link href={item.href}>
-              <item.icon className="mr-2 h-4 w-4" />
-              {item.label}
-            </Link>
-          </Button>
-        ))}
-      </nav>
-
       {/* Search */}
-      <div className="px-2 pb-2">
+      <div className="px-3 pb-3">
         <div className="relative">
-          <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-          <Input
+          <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-600" />
+          <input
             placeholder="Search chats..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-8 pl-7 text-xs"
+            className="w-full h-9 rounded-lg border border-[#262626] bg-white/5 pl-8 pr-3 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-[#6366f1]/50 transition-colors"
           />
         </div>
       </div>
 
+      {/* Divider + label */}
+      <div className="px-3 pb-2">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+          History
+        </span>
+      </div>
+
       <ScrollArea className="flex-1 px-2">
         {filtered.length === 0 ? (
-          <div className="py-4 text-center text-sm text-muted-foreground">
+          <div className="py-6 text-center text-xs text-slate-600">
             {search ? "No matching conversations" : "No conversations yet"}
           </div>
         ) : (
@@ -131,20 +133,20 @@ export function Sidebar() {
                 key={conv.id}
                 href={`/chat/${conv.id}`}
                 className={cn(
-                  "group flex items-center justify-between rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent",
-                  pathname === `/chat/${conv.id}` && "bg-accent"
+                  "group flex items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors",
+                  pathname === `/chat/${conv.id}`
+                    ? "bg-white/5 text-white"
+                    : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
                 )}
               >
                 <span className="truncate flex-1">{conv.title}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100"
+                <button
+                  className="h-6 w-6 shrink-0 flex items-center justify-center rounded opacity-0 group-hover:opacity-100 hover:bg-white/10 transition-all text-slate-500 hover:text-red-400"
                   onClick={(e) => handleDelete(conv.id, e)}
                   aria-label="Delete conversation"
                 >
                   <Trash2 className="h-3 w-3" />
-                </Button>
+                </button>
               </Link>
             ))}
           </div>

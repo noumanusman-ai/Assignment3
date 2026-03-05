@@ -1,8 +1,7 @@
 import { db } from "@/lib/db";
 import { documents, chunks, embeddings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { chunkText } from "./chunker";
-import { generateEmbeddings } from "./embeddings";
+import { semanticChunk } from "./embeddings";
 
 export async function ingestDocument(documentId: string): Promise<void> {
   // Set status to processing
@@ -20,48 +19,47 @@ export async function ingestDocument(documentId: string): Promise<void> {
 
     if (!doc) throw new Error("Document not found");
 
-    let textContent = doc.content;
+    const textContent = doc.content;
 
-    // For PDF files, content is already extracted during upload
     if (!textContent.trim()) {
       throw new Error("Document has no content");
     }
 
-    // Chunk the text
-    const textChunks = chunkText(textContent);
+    // Semantic chunking — returns chunks with pre-computed embeddings
+    const result = await semanticChunk(textContent, {
+      similarityThreshold: 0.5,
+      maxChunkSize: 1500,
+      minChunkSize: 100,
+    });
 
-    if (textChunks.length === 0) {
+    if (result.chunks.length === 0) {
       throw new Error("No chunks generated from document");
     }
 
-    // Generate embeddings in batches of 50
-    const batchSize = 50;
-    for (let i = 0; i < textChunks.length; i += batchSize) {
-      const batch = textChunks.slice(i, i + batchSize);
-      const texts = batch.map((c) => c.content);
-      const vectors = await generateEmbeddings(texts);
+    console.log(
+      `Document ${documentId}: ${result.total_sentences} sentences → ${result.chunks.length} semantic chunks`
+    );
 
-      // Insert chunks and embeddings
-      for (let j = 0; j < batch.length; j++) {
-        const chunk = batch[j];
-        const [insertedChunk] = await db
-          .insert(chunks)
-          .values({
-            documentId,
-            content: chunk.content,
-            chunkIndex: chunk.chunkIndex,
-            startOffset: chunk.startOffset,
-            endOffset: chunk.endOffset,
-            tokenCount: Math.ceil(chunk.content.length / 4),
-          })
-          .returning({ id: chunks.id });
+    // Insert chunks and their pre-computed embeddings
+    for (const chunk of result.chunks) {
+      const [insertedChunk] = await db
+        .insert(chunks)
+        .values({
+          documentId,
+          content: chunk.content,
+          chunkIndex: chunk.chunk_index,
+          startOffset: chunk.start_offset,
+          endOffset: chunk.end_offset,
+          tokenCount: Math.ceil(chunk.content.length / 4),
+          metadata: { sentenceCount: chunk.sentence_count },
+        })
+        .returning({ id: chunks.id });
 
-        await db.insert(embeddings).values({
-          chunkId: insertedChunk.id,
-          embedding: vectors[j],
-          model: "all-MiniLM-L6-v2",
-        });
-      }
+      await db.insert(embeddings).values({
+        chunkId: insertedChunk.id,
+        embedding: chunk.embedding,
+        model: result.model,
+      });
     }
 
     // Set status to ready

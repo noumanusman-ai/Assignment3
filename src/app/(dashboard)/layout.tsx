@@ -9,7 +9,15 @@ export default function DashboardLayout({
 }) {
   return (
     <SessionProvider>
-      <div className="flex h-screen flex-col">
+      {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+      <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet"
+      />
+      <div
+        className="flex h-screen flex-col bg-[#0a0a0a] text-slate-100"
+        style={{ fontFamily: "'Inter', sans-serif" }}
+      >
         <Header />
         <div className="flex flex-1 overflow-hidden">
           <Sidebar />
