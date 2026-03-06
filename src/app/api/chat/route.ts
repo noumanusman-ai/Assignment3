@@ -34,8 +34,6 @@ export async function POST(req: NextRequest) {
   if (!lastUserMessage || lastUserMessage.role !== "user") {
     return new Response("No user message", { status: 400 });
   }
-
-  // Get or create conversation
   let convId = conversationId;
   if (!convId) {
     const title =
@@ -50,7 +48,6 @@ export async function POST(req: NextRequest) {
       .returning();
     convId = conv.id;
   } else {
-    // Verify ownership
     const [conv] = await db
       .select({ id: conversations.id })
       .from(conversations)
@@ -64,11 +61,8 @@ export async function POST(req: NextRequest) {
       return new Response("Conversation not found", { status: 404 });
     }
   }
-
-  // RAG: embed query and retrieve context
   let context: Awaited<ReturnType<typeof retrieveRelevantChunks>> = [];
   let citations: Citation[] = [];
-
   try {
     const queryEmbedding = await generateQueryEmbedding(
       lastUserMessage.content
@@ -88,20 +82,14 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("RAG retrieval failed, proceeding without context:", error);
   }
-
   const systemPrompt = buildSystemPrompt(context);
-
-  // Build message history for AI
   const aiMessages = chatMessages.map((m) => ({
     role: m.role as "user" | "assistant" | "system",
     content: m.content,
   }));
 
   const citationsB64 = Buffer.from(JSON.stringify(citations)).toString("base64");
-
-  // ── Regeneration mode: create new assistant sibling only ──
   if (regenerate && userMessageId && convId) {
-    // Count existing assistant siblings under this user message
     const assistantSiblings = await db
       .select({ siblingIndex: messages.siblingIndex })
       .from(messages)
