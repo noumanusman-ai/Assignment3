@@ -75,6 +75,16 @@ export function ChatInterface({
     setSentContent(content);
     setInputValue("");
 
+    // When editing an old message, truncate the displayed path to the parent
+    if (parentId !== undefined) {
+      const parentIdx = messagePath.findIndex((m) => m.id === parentId);
+      if (parentIdx >= 0) {
+        setMessagePath(messagePath.slice(0, parentIdx + 1));
+      } else if (parentId === null) {
+        setMessagePath([]);
+      }
+    }
+
     const historyMessages =
       parentId !== undefined
         ? messagePath
