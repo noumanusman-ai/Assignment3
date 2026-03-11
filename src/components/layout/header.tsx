@@ -2,11 +2,13 @@
 
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
-import { LogOut, Shield, User } from "lucide-react";
+import { LogOut, Shield, User, PanelLeftClose, PanelLeft } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { useSidebar } from "./sidebar-context";
 
 export function Header() {
   const { data: session } = useSession();
+  const { isOpen: sidebarOpen, toggle: toggleSidebar } = useSidebar();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -44,10 +46,22 @@ export function Header() {
             ArborVect
           </h1>
           <p className="text-[10px] text-slate-500 font-medium uppercase tracking-widest">
-            Enterprise AI v1.2
           </p>
         </div>
       </Link>
+
+      {/* Sidebar toggle */}
+      <button
+        onClick={toggleSidebar}
+        className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+        aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
+      >
+        {sidebarOpen ? (
+          <PanelLeftClose className="h-4 w-4" />
+        ) : (
+          <PanelLeft className="h-4 w-4" />
+        )}
+      </button>
 
       {/* Spacer */}
       <div className="flex-1" />

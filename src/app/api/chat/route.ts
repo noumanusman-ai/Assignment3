@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { streamText } from "ai";
+import { streamText, generateText } from "ai";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { conversations, messages } from "@/lib/db/schema";
@@ -8,6 +8,29 @@ import { model, buildSystemPrompt } from "@/lib/ai";
 import { generateQueryEmbedding } from "@/lib/rag/embeddings";
 import { retrieveRelevantChunks } from "@/lib/rag/retrieval";
 import type { Citation } from "@/types";
+
+async function generateConversationTitle(
+  userMessage: string,
+  convId: string
+) {
+  try {
+    const { text } = await generateText({
+      model,
+      system:
+        "Generate a short, concise title (max 6 words) for a conversation that starts with the following message. Return ONLY the title, no quotes, no punctuation at the end.",
+      messages: [{ role: "user", content: userMessage }],
+    });
+    const title = text.trim().slice(0, 80);
+    if (title) {
+      await db
+        .update(conversations)
+        .set({ title })
+        .where(eq(conversations.id, convId));
+    }
+  } catch (error) {
+    console.error("Failed to generate conversation title:", error);
+  }
+}
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -34,23 +57,22 @@ export async function POST(req: NextRequest) {
   if (!lastUserMessage || lastUserMessage.role !== "user") {
     return new Response("No user message", { status: 400 });
   }
-
-  // Get or create conversation
   let convId = conversationId;
+  let isNewConversation = false;
   if (!convId) {
-    const title =
+    const tempTitle =
       lastUserMessage.content.slice(0, 50) +
       (lastUserMessage.content.length > 50 ? "..." : "");
     const [conv] = await db
       .insert(conversations)
       .values({
         userId: session.user.id,
-        title,
+        title: tempTitle,
       })
       .returning();
     convId = conv.id;
+    isNewConversation = true;
   } else {
-    // Verify ownership
     const [conv] = await db
       .select({ id: conversations.id })
       .from(conversations)
@@ -64,11 +86,8 @@ export async function POST(req: NextRequest) {
       return new Response("Conversation not found", { status: 404 });
     }
   }
-
-  // RAG: embed query and retrieve context
   let context: Awaited<ReturnType<typeof retrieveRelevantChunks>> = [];
   let citations: Citation[] = [];
-
   try {
     const queryEmbedding = await generateQueryEmbedding(
       lastUserMessage.content
@@ -88,20 +107,14 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("RAG retrieval failed, proceeding without context:", error);
   }
-
   const systemPrompt = buildSystemPrompt(context);
-
-  // Build message history for AI
   const aiMessages = chatMessages.map((m) => ({
     role: m.role as "user" | "assistant" | "system",
     content: m.content,
   }));
 
   const citationsB64 = Buffer.from(JSON.stringify(citations)).toString("base64");
-
-  // ── Regeneration mode: create new assistant sibling only ──
   if (regenerate && userMessageId && convId) {
-    // Count existing assistant siblings under this user message
     const assistantSiblings = await db
       .select({ siblingIndex: messages.siblingIndex })
       .from(messages)
@@ -195,6 +208,11 @@ export async function POST(req: NextRequest) {
         .update(conversations)
         .set({ updatedAt: new Date() })
         .where(eq(conversations.id, convId!));
+
+      // Generate smart title for new conversations
+      if (isNewConversation) {
+        generateConversationTitle(lastUserMessage.content, convId!);
+      }
     },
   });
 

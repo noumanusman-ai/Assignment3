@@ -75,6 +75,16 @@ export function ChatInterface({
     setSentContent(content);
     setInputValue("");
 
+    // When editing an old message, truncate the displayed path to the parent
+    if (parentId !== undefined) {
+      const parentIdx = messagePath.findIndex((m) => m.id === parentId);
+      if (parentIdx >= 0) {
+        setMessagePath(messagePath.slice(0, parentIdx + 1));
+      } else if (parentId === null) {
+        setMessagePath([]);
+      }
+    }
+
     const historyMessages =
       parentId !== undefined
         ? messagePath
@@ -338,7 +348,7 @@ export function ChatInterface({
                   </div>
                 </div>
                 <h2 className="text-2xl font-bold text-white mb-3 tracking-tight">
-                  AI Insight Canvas
+                  AI Platform
                 </h2>
                 <p className="text-slate-500 text-sm leading-relaxed mb-6">
                   Ask ArborVect anything about your uploaded documents.
@@ -348,9 +358,7 @@ export function ChatInterface({
                 <div className="flex flex-wrap justify-center gap-2">
                   {[
                     "Vector Search",
-                    "PDF Analysis",
-                    "Code Generation",
-                    "Data Insights",
+                    "Code Generation"
                   ].map((tag) => (
                     <span
                       key={tag}
