@@ -61,44 +61,7 @@ export function ChatInput({
               scrollbarColor: "#262626 transparent",
             }}
           />
-          <div className="flex items-center justify-between px-3 py-2 border-t border-white/5">
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                className="p-2 text-slate-500 hover:text-slate-200 rounded-lg hover:bg-white/5 transition-colors"
-                aria-label="Attach file"
-              >
-                <span className="material-symbols-outlined text-xl">add</span>
-              </button>
-              <button
-                type="button"
-                className="p-2 text-slate-500 hover:text-slate-200 rounded-lg hover:bg-white/5 transition-colors"
-                aria-label="Upload image"
-              >
-                <span className="material-symbols-outlined text-xl">
-                  image
-                </span>
-              </button>
-              <button
-                type="button"
-                className="p-2 text-slate-500 hover:text-slate-200 rounded-lg hover:bg-white/5 transition-colors"
-                aria-label="Upload document"
-              >
-                <span className="material-symbols-outlined text-xl">
-                  description
-                </span>
-              </button>
-              <div className="w-px h-4 bg-[#262626] mx-2" />
-              <button
-                type="button"
-                className="p-2 text-slate-500 hover:text-slate-200 rounded-lg hover:bg-white/5 transition-colors"
-                aria-label="Settings"
-              >
-                <span className="material-symbols-outlined text-xl">
-                  settings
-                </span>
-              </button>
-            </div>
+          <div className="flex items-center justify-end px-3 py-2 border-t border-white/5">
             <div className="flex items-center gap-3">
               <span className="text-[11px] text-slate-500 font-medium hidden sm:block">
                 Shift + Enter for new line
@@ -122,7 +85,7 @@ export function ChatInput({
         </div>
       </div>
       <p className="text-center text-[10px] text-slate-600 mt-4 uppercase tracking-[0.2em] font-semibold opacity-50">
-        AI Powered Insight Canvas &bull; ArborVect v1.2
+        AI Powered Insight &bull; ArborVect 
       </p>
     </div>
   );

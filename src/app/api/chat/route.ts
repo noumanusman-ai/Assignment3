@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { streamText } from "ai";
+import { streamText, generateText } from "ai";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { conversations, messages } from "@/lib/db/schema";
@@ -8,6 +8,29 @@ import { model, buildSystemPrompt } from "@/lib/ai";
 import { generateQueryEmbedding } from "@/lib/rag/embeddings";
 import { retrieveRelevantChunks } from "@/lib/rag/retrieval";
 import type { Citation } from "@/types";
+
+async function generateConversationTitle(
+  userMessage: string,
+  convId: string
+) {
+  try {
+    const { text } = await generateText({
+      model,
+      system:
+        "Generate a short, concise title (max 6 words) for a conversation that starts with the following message. Return ONLY the title, no quotes, no punctuation at the end.",
+      messages: [{ role: "user", content: userMessage }],
+    });
+    const title = text.trim().slice(0, 80);
+    if (title) {
+      await db
+        .update(conversations)
+        .set({ title })
+        .where(eq(conversations.id, convId));
+    }
+  } catch (error) {
+    console.error("Failed to generate conversation title:", error);
+  }
+}
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -35,18 +58,20 @@ export async function POST(req: NextRequest) {
     return new Response("No user message", { status: 400 });
   }
   let convId = conversationId;
+  let isNewConversation = false;
   if (!convId) {
-    const title =
+    const tempTitle =
       lastUserMessage.content.slice(0, 50) +
       (lastUserMessage.content.length > 50 ? "..." : "");
     const [conv] = await db
       .insert(conversations)
       .values({
         userId: session.user.id,
-        title,
+        title: tempTitle,
       })
       .returning();
     convId = conv.id;
+    isNewConversation = true;
   } else {
     const [conv] = await db
       .select({ id: conversations.id })
@@ -183,6 +208,11 @@ export async function POST(req: NextRequest) {
         .update(conversations)
         .set({ updatedAt: new Date() })
         .where(eq(conversations.id, convId!));
+
+      // Generate smart title for new conversations
+      if (isNewConversation) {
+        generateConversationTitle(lastUserMessage.content, convId!);
+      }
     },
   });
 
